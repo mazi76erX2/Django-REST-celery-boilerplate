@@ -1,0 +1,97 @@
+services:
+  backend:
+    restart: unless-stopped
+    build:
+      context: .
+      dockerfile: ./docker/backend/Dockerfile
+    entrypoint: /app/docker/backend/entrypoint.sh
+    command: python manage.py runserver 0.0.0.0:8000
+    depends_on:
+      - db
+      - valkey
+    networks:
+      - backend
+    ports:
+      - 8000:8000
+    expose:
+      - 8000
+    env_file:
+      - ./.env
+    develop:
+      watch:
+        - action: sync
+          path: ./backend
+          target: /app/backend
+          ignore:
+            - __pycache__/
+            - "*.pyc"
+            - .pytest_cache/
+        - action: sync
+          path: ./example_app
+          target: /app/example_app
+          ignore:
+            - __pycache__/
+            - "*.pyc"
+            - .pytest_cache/
+        - action: rebuild
+          path: ./pyproject.toml
+        - action: rebuild
+          path: ./uv.lock
+
+  db:
+    image: postgres:18-alpine
+    restart: always
+    environment:
+      - POSTGRES_USER=${DATABASE_USERNAME}
+      - POSTGRES_PASSWORD=${DATABASE_PASSWORD}
+      - POSTGRES_DB=${DATABASE_NAME}
+    ports:
+      - 5432:5432
+    expose:
+      - 5432
+    volumes:
+      - db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - backend
+
+  valkey:
+    restart: unless-stopped
+    image: valkey/valkey:9-alpine
+    expose:
+      - 6379
+    ports:
+      - 6379:6379
+    volumes:
+      - valkey_data:/data
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - backend
+
+  pgadmin:
+    image: dpage/pgadmin4
+    restart: always
+    ports:
+      - "8888:80"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD}
+    depends_on:
+      - db
+
+volumes:
+  static_volume: {}
+  db: {}
+  valkey_data: {}
+
+networks:
+  backend:
+    driver: bridge
