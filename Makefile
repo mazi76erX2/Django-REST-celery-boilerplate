@@ -105,34 +105,70 @@ drop-db-mac: ## Drop a local database on Mac
 # =============================================================================
 
 .PHONY: run
-run: ## Run the local development server
+run: ## Run the local development server with uvicorn
 	@echo "$(GREEN)Starting development server...$(NC)"
-	$(UV) run python $(APP_DIR)/manage.py runserver
+	cd $(APP_DIR) && $(UV) run uvicorn server.asgi:application --host 0.0.0.0 --port 8000 --reload
+
+.PHONY: run-gunicorn
+run-gunicorn: ## Run with gunicorn + uvicorn workers locally
+	@echo "$(GREEN)Starting gunicorn with uvicorn workers...$(NC)"
+	cd $(APP_DIR) && $(UV) run gunicorn server.asgi:application \
+		--bind 0.0.0.0:8000 \
+		--worker-class uvicorn.workers.UvicornWorker \
+		--workers 2 \
+		--reload
 
 .PHONY: run-local
 run-local: migrate run ## Run migrations and start the local development server
 
-.PHONY: migrate
-migrate: ## Run database migrations
-	@echo "$(GREEN)Running migrations...$(NC)"
-	$(UV) run python $(APP_DIR)/manage.py migrate
+# =============================================================================
+# CELERY
+# =============================================================================
 
-.PHONY: makemigrations
-makemigrations: ## Create new migrations
-	@echo "$(GREEN)Creating migrations...$(NC)"
-	$(UV) run python $(APP_DIR)/manage.py makemigrations
+.PHONY: celery-worker
+celery-worker: ## Run Celery worker locally
+	@echo "$(GREEN)Starting Celery worker...$(NC)"
+	cd $(APP_DIR) && $(UV) run celery -A server worker -l INFO
 
-.PHONY: shell
-shell-django: ## Open Django shell
-	$(UV) run python $(APP_DIR)/manage.py shell
+.PHONY: celery-beat
+celery-beat: ## Run Celery beat scheduler locally
+	@echo "$(GREEN)Starting Celery beat...$(NC)"
+	cd $(APP_DIR) && $(UV) run celery -A server beat -l INFO
 
-.PHONY: superuser
-superuser: ## Create a superuser
-	$(UV) run python $(APP_DIR)/manage.py createsuperuser
+.PHONY: celery-flower
+celery-flower: ## Run Flower monitoring locally
+	@echo "$(GREEN)Starting Flower...$(NC)"
+	cd $(APP_DIR) && $(UV) run celery -A server flower --port=5555
 
-.PHONY: collectstatic
-collectstatic: ## Collect static files
-	$(UV) run python $(APP_DIR)/manage.py collectstatic --noinput
+.PHONY: celery-all
+celery-all: ## Run all Celery services (worker, beat, flower) - requires multiple terminals
+	@echo "$(YELLOW)Run these commands in separate terminals:$(NC)"
+	@echo "  make celery-worker"
+	@echo "  make celery-beat"
+	@echo "  make celery-flower"
+
+.PHONY: celery-worker-docker
+celery-worker-docker: ## View Celery worker logs in Docker
+	$(DOCKER_COMPOSE) logs -f celery-worker
+
+.PHONY: celery-beat-docker
+celery-beat-docker: ## View Celery beat logs in Docker
+	$(DOCKER_COMPOSE) logs -f celery-beat
+
+.PHONY: celery-purge
+celery-purge: ## Purge all Celery tasks
+	@echo "$(YELLOW)Purging all Celery tasks...$(NC)"
+	cd $(APP_DIR) && $(UV) run celery -A server purge -f
+
+.PHONY: celery-inspect
+celery-inspect: ## Inspect active Celery workers
+	@echo "$(GREEN)Inspecting Celery workers...$(NC)"
+	cd $(APP_DIR) && $(UV) run celery -A server inspect active
+
+.PHONY: celery-events
+celery-events: ## Monitor Celery events in real-time
+	@echo "$(GREEN)Monitoring Celery events...$(NC)"
+	cd $(APP_DIR) && $(UV) run celery -A server events
 
 # =============================================================================
 # TESTING

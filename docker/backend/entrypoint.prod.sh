@@ -1,20 +1,21 @@
 #!/bin/bash
 set -e
 
-# Check if database has started
-if [ "$DATABASE" = "django-app" ]; then
-    echo "Waiting for postgres..."
-
-    while ! nc -z $DATABASE_HOST $DATABASE_PORT; do
-      sleep 0.1
-    done
-
-    echo "PostgreSQL started"
-fi
-
-until cd /app/backend; do
-    echo "Waiting for server volume..."
+# Wait for database
+echo "Waiting for PostgreSQL..."
+while ! nc -z $DATABASE_HOST $DATABASE_PORT; do
+    sleep 0.5
 done
+echo "PostgreSQL started"
+
+# Wait for Valkey/Redis
+echo "Waiting for Valkey..."
+while ! nc -z $CACHE_HOST $CACHE_PORT; do
+    sleep 0.5
+done
+echo "Valkey started"
+
+cd /app/backend
 
 echo "Collecting static files..."
 python manage.py collectstatic --noinput

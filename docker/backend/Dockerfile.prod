@@ -8,11 +8,10 @@ RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 # Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
-    netcat \
+    netcat-traditional \
     libpq5 \
     build-essential \
     libpq-dev \
-    nginx \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
@@ -46,6 +45,7 @@ FROM python:3.14.2-slim AS final
 # Install runtime dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq5 \
+    netcat-traditional \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -61,4 +61,10 @@ ENV VIRTUAL_ENV="/app/.venv"
 # Create static files directory
 RUN mkdir -p /app/backend/staticfiles
 
+# Set up the entrypoint script
+COPY docker/backend/entrypoint.prod.sh /entrypoint.sh
+RUN sed -i 's/\r$//g' /entrypoint.sh && chmod +x /entrypoint.sh
+
 EXPOSE 8000
+
+ENTRYPOINT ["/entrypoint.sh"]

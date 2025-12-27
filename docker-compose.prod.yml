@@ -4,22 +4,86 @@ services:
     build:
       context: .
       dockerfile: ./docker/backend/Dockerfile.prod
-    command: sh -c "gunicorn
-      server.asgi:application
-      --chdir ./backend
+    entrypoint: /app/docker/backend/entrypoint.prod.sh
+    command: >
+      gunicorn server.asgi:application
       --bind 0.0.0.0:8000
-      -k uvicorn.workers.UvicornWorker"
+      --worker-class uvicorn.workers.UvicornWorker
+      --workers 4
+      --threads 2
+      --worker-connections 1000
+      --max-requests 10000
+      --max-requests-jitter 1000
+      --timeout 30
+      --keepalive 5
+      --access-logfile -
+      --error-logfile -
+      --capture-output
+      --enable-stdio-inheritance
+    working_dir: /app/backend
     volumes:
-      - ./backend:/app/backend
+      - static_volume:/app/backend/staticfiles
     depends_on:
-      - db
-      - valkey
+      db:
+        condition: service_healthy
+      valkey:
+        condition: service_healthy
     networks:
       - backend
-    ports:
-      - 8000:8000
     expose:
       - 8000
+    env_file:
+      - ./.env
+
+  celery-worker:
+    restart: unless-stopped
+    build:
+      context: .
+      dockerfile: ./docker/backend/Dockerfile.prod
+    command: celery -A server worker -l INFO --concurrency=4
+    working_dir: /app/backend
+    depends_on:
+      db:
+        condition: service_healthy
+      valkey:
+        condition: service_healthy
+    networks:
+      - backend
+    env_file:
+      - ./.env
+
+  celery-beat:
+    restart: unless-stopped
+    build:
+      context: .
+      dockerfile: ./docker/backend/Dockerfile.prod
+    command: celery -A server beat -l INFO --scheduler django_celery_beat.schedulers:DatabaseScheduler
+    working_dir: /app/backend
+    depends_on:
+      db:
+        condition: service_healthy
+      valkey:
+        condition: service_healthy
+      celery-worker:
+        condition: service_started
+    networks:
+      - backend
+    env_file:
+      - ./.env
+
+  flower:
+    restart: unless-stopped
+    build:
+      context: .
+      dockerfile: ./docker/backend/Dockerfile.prod
+    command: celery -A server flower --port=5555 --basic_auth=${FLOWER_USER}:${FLOWER_PASSWORD}
+    working_dir: /app/backend
+    depends_on:
+      - celery-worker
+    networks:
+      - backend
+    expose:
+      - 5555
     env_file:
       - ./.env
 
@@ -30,8 +94,6 @@ services:
       - POSTGRES_USER=${DATABASE_USERNAME}
       - POSTGRES_PASSWORD=${DATABASE_PASSWORD}
       - POSTGRES_DB=${DATABASE_NAME}
-    ports:
-      - 5432:5432
     expose:
       - 5432
     volumes:
@@ -77,6 +139,8 @@ services:
       - 80:80
       - 443:443
     depends_on:
+      - backend
+    networks:
       - backend
     command: '/bin/sh -c ''while :; do sleep 6h & wait $${!}; nginx -s reload; done & nginx -g "daemon off;"'''
 

@@ -10,10 +10,14 @@ services:
         "-c",
         "uv pip install debugpy &&
         python -m debugpy --wait-for-client --listen 0.0.0.0:5678
-        ./manage.py runserver 0.0.0.0:8000",
+        -m uvicorn server.asgi:application --host 0.0.0.0 --port 8000 --reload",
       ]
+    working_dir: /app/backend
     depends_on:
-      - db
+      db:
+        condition: service_healthy
+      valkey:
+        condition: service_healthy
     networks:
       - backend
     ports:
@@ -31,8 +35,61 @@ services:
           ignore:
             - __pycache__/
             - "*.pyc"
+        - action: sync
+          path: ./example_app
+          target: /app/example_app
+          ignore:
+            - __pycache__/
+            - "*.pyc"
         - action: rebuild
           path: ./pyproject.toml
+
+  celery-worker:
+    restart: unless-stopped
+    build:
+      context: .
+      dockerfile: ./docker/backend/Dockerfile
+    command: celery -A server worker -l DEBUG --concurrency=1
+    working_dir: /app/backend
+    depends_on:
+      db:
+        condition: service_healthy
+      valkey:
+        condition: service_healthy
+    networks:
+      - backend
+    env_file:
+      - ./.env
+    develop:
+      watch:
+        - action: sync
+          path: ./backend
+          target: /app/backend
+          ignore:
+            - __pycache__/
+            - "*.pyc"
+        - action: sync
+          path: ./example_app
+          target: /app/example_app
+          ignore:
+            - __pycache__/
+            - "*.pyc"
+
+  flower:
+    restart: unless-stopped
+    build:
+      context: .
+      dockerfile: ./docker/backend/Dockerfile
+    command: celery -A server flower --port=5555
+    working_dir: /app/backend
+    depends_on:
+      - celery-worker
+    networks:
+      - backend
+    ports:
+      - 5555:5555
+    env_file:
+      - ./.env
 
   db:
     image: postgres:18-alpine
@@ -55,9 +112,27 @@ services:
     networks:
       - backend
 
+  valkey:
+    restart: unless-stopped
+    image: valkey/valkey:9-alpine
+    expose:
+      - 6379
+    ports:
+      - 6379:6379
+    volumes:
+      - valkey_data:/data
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - backend
+
 volumes:
   static_volume: {}
   db: {}
+  valkey_data: {}
 
 networks:
   backend:

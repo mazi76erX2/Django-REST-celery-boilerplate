@@ -5,10 +5,15 @@ services:
       context: .
       dockerfile: ./docker/backend/Dockerfile
     entrypoint: /app/docker/backend/entrypoint.sh
-    command: python manage.py runserver 0.0.0.0:8000
+    command: >
+      uvicorn server.asgi:application
+      --reload
+    working_dir: /app/backend
     depends_on:
-      - db
-      - valkey
+      db:
+        condition: service_healthy
+      valkey:
+        condition: service_healthy
     networks:
       - backend
     ports:
@@ -37,6 +42,76 @@ services:
           path: ./pyproject.toml
         - action: rebuild
           path: ./uv.lock
+
+  celery-worker:
+    restart: unless-stopped
+    build:
+      context: .
+      dockerfile: ./docker/backend/Dockerfile
+    command: celery -A server worker -l INFO --concurrency=2
+    working_dir: /app/backend
+    depends_on:
+      db:
+        condition: service_healthy
+      valkey:
+        condition: service_healthy
+      backend:
+        condition: service_started
+    networks:
+      - backend
+    env_file:
+      - ./.env
+    develop:
+      watch:
+        - action: sync
+          path: ./backend
+          target: /app/backend
+          ignore:
+            - __pycache__/
+            - "*.pyc"
+        - action: sync
+          path: ./example_app
+          target: /app/example_app
+          ignore:
+            - __pycache__/
+            - "*.pyc"
+        - action: rebuild
+          path: ./pyproject.toml
+
+  celery-beat:
+    restart: unless-stopped
+    build:
+      context: .
+      dockerfile: ./docker/backend/Dockerfile
+    command: celery -A server beat -l INFO --scheduler django_celery_beat.schedulers:DatabaseScheduler
+    working_dir: /app/backend
+    depends_on:
+      db:
+        condition: service_healthy
+      valkey:
+        condition: service_healthy
+      celery-worker:
+        condition: service_started
+    networks:
+      - backend
+    env_file:
+      - ./.env
+
+  flower:
+    restart: unless-stopped
+    build:
+      context: .
+      dockerfile: ./docker/backend/Dockerfile
+    command: celery -A server flower --port=5555
+    working_dir: /app/backend
+    depends_on:
+      - celery-worker
+    networks:
+      - backend
+    ports:
+      - 5555:5555
+    env_file:
+      - ./.env
 
   db:
     image: postgres:18-alpine
