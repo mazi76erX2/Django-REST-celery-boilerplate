@@ -10,7 +10,7 @@ An asynchronous API using Django REST Framework.
   - [Requirements](#requirements)
   - [Installation](#installation)
     - [Local Setup with uv](#local-setup-with-uv)
-    - [Docker Setup](#docker-setup)
+      - [Running Celery Locally](#running-celery-locally)
     - [Docker Setup with Watch Mode](#docker-setup-with-watch-mode)
   - [Usage](#usage)
     - [Local Development](#local-development)
@@ -123,7 +123,22 @@ An asynchronous API using Django REST Framework.
 
     The API will be available at `http://localhost:8000`
 
+8. **Celery & Channels:**
+
+#### Running Celery Locally
+
+```bash
+# Start Celery worker
+make celery-worker
+
+# Start Celery beat (scheduled tasks)
+make celery-beat
+
+# Start Flower (monitoring UI)
+make celery-flower
+
 ### Docker Setup
+```
 
 1. **Copy environment file:**
 ```bash

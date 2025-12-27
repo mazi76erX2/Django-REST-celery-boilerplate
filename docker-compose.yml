@@ -6,8 +6,13 @@ services:
       dockerfile: ./docker/backend/Dockerfile
     entrypoint: /app/docker/backend/entrypoint.sh
     command: >
-      uvicorn server.asgi:application
+      gunicorn server.asgi:application
+      --bind 0.0.0.0:8000
+      --worker-class uvicorn.workers.UvicornWorker
+      --workers 1
       --reload
+      --access-logfile -
+      --error-logfile -
     working_dir: /app/backend
     depends_on:
       db:
@@ -22,6 +27,8 @@ services:
       - 8000
     env_file:
       - ./.env
+    environment:
+      - DJANGO_SETTINGS_MODULE=${DJANGO_SETTINGS_MODULE:-server.settings.local}
     develop:
       watch:
         - action: sync
@@ -61,6 +68,8 @@ services:
       - backend
     env_file:
       - ./.env
+    environment:
+      - DJANGO_SETTINGS_MODULE=${DJANGO_SETTINGS_MODULE:-server.settings.local}
     develop:
       watch:
         - action: sync
@@ -96,6 +105,8 @@ services:
       - backend
     env_file:
       - ./.env
+    environment:
+      - DJANGO_SETTINGS_MODULE=${DJANGO_SETTINGS_MODULE:-server.settings.local}
 
   flower:
     restart: unless-stopped
@@ -112,6 +123,8 @@ services:
       - 5555:5555
     env_file:
       - ./.env
+    environment:
+      - DJANGO_SETTINGS_MODULE=${DJANGO_SETTINGS_MODULE:-server.settings.local}
 
   db:
     image: postgres:18-alpine

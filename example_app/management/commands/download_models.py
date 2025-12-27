@@ -1,10 +1,10 @@
 import logging
 from pathlib import Path
 
-from django.core.management.base import BaseCommand
 from django.conf import settings
+from django.core.management.base import BaseCommand
 
-from transformers import TFAutoModelForSequenceClassification, AutoTokenizer
+from transformers import AutoTokenizer, TFAutoModelForSequenceClassification
 
 logger = logging.getLogger(__name__)
 

@@ -1,7 +1,7 @@
 from unittest.mock import AsyncMock, patch
 
-from django.test import TestCase
 from django.core.cache import cache
+from django.test import TestCase
 
 from ..views import BulkAnalysisViewSet
 

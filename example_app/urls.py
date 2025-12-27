@@ -1,11 +1,11 @@
-from django.urls import path, include
+from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
-from .views import BulkAnalysisViewSet
-
+from .views import AnalysisViewSet, TaskStatusViewSet
 
 router = DefaultRouter()
-router.register(r"analyses", BulkAnalysisViewSet, basename="analyses")
+router.register(r"analyses", AnalysisViewSet, basename="analyses")
+router.register(r"tasks", TaskStatusViewSet, basename="tasks")
 
 urlpatterns = [
     path("", include(router.urls)),

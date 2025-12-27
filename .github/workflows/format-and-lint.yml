@@ -26,16 +26,18 @@ jobs:
         run: uv sync --all-extras
 
       - name: Check formatting with black
-        run: uv run black --check backend/ --exclude=migrations
+        run: uv run black --check backend/ example_app/ --exclude=migrations
 
       - name: Check imports with isort
-        run: uv run isort --check-only backend/ --skip=migrations
+        run: uv run isort --check-only backend/ example_app/ --skip=migrations
 
       - name: Lint with ruff
-        run: uv run ruff check backend/
+        run: uv run ruff check backend/ example_app/
 
       - name: Type check with mypy
         run: uv run mypy backend/ --exclude=migrations
+        env:
+          DJANGO_SETTINGS_MODULE: server.settings.local
 
   test:
     runs-on: ubuntu-latest
@@ -78,11 +80,14 @@ jobs:
 
       - name: Run tests
         env:
+          DJANGO_SETTINGS_MODULE: server.settings.local
           DATABASE_NAME: test_db
           DATABASE_USERNAME: postgres
           DATABASE_PASSWORD: postgres
           DATABASE_HOST: localhost
           DATABASE_PORT: 5432
+          CACHE_HOST: localhost
+          CACHE_PORT: 6379
           DEBUG: "true"
           SECRET_KEY: "test-secret-key"
         run: uv run pytest backend/ -v --cov=backend --cov-report=xml

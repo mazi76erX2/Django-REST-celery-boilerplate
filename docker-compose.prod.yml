@@ -34,6 +34,8 @@ services:
       - 8000
     env_file:
       - ./.env
+    environment:
+      - DJANGO_SETTINGS_MODULE=${DJANGO_SETTINGS_MODULE:-server.settings.prod}
 
   celery-worker:
     restart: unless-stopped
@@ -51,6 +53,8 @@ services:
       - backend
     env_file:
       - ./.env
+    environment:
+      - DJANGO_SETTINGS_MODULE=${DJANGO_SETTINGS_MODULE:-server.settings.prod}
 
   celery-beat:
     restart: unless-stopped
@@ -70,6 +74,8 @@ services:
       - backend
     env_file:
       - ./.env
+    environment:
+      - DJANGO_SETTINGS_MODULE=${DJANGO_SETTINGS_MODULE:-server.settings.prod}
 
   flower:
     restart: unless-stopped
@@ -86,6 +92,8 @@ services:
       - 5555
     env_file:
       - ./.env
+    environment:
+      - DJANGO_SETTINGS_MODULE=${DJANGO_SETTINGS_MODULE:-server.settings.prod}
 
   db:
     image: postgres:18-alpine
