@@ -1,8 +1,7 @@
 import logging
 
-from django.conf import settings
-
 import tensorflow as tf
+from django.conf import settings
 from transformers import AutoTokenizer, TFAutoModelForSequenceClassification
 
 SENTIMENT_LABELS = settings.SENTIMENT_LABELS

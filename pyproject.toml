@@ -95,14 +95,20 @@ ignore = [
 known-first-party = ["backend", "server", "example_app"]
 known-third-party = ["django", "rest_framework", "channels", "celery"]
 
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]
+"tests/*" = ["ARG001", "ARG002"]
+"example_app/tests/__init__.py" = ["F403"]
+"example_app/tests/analysis.py" = ["F821", "SIM117", "B017"]
+"example_app/views.py" = ["ARG002"]
+"example_app/consumers.py" = ["ARG002"]
+"example_app/management/commands/*.py" = ["ARG002"]
+"tasks.py" = ["ARG001"]
+"backend/server/settings/*.py" = ["F403", "F405"]
+
 [tool.ruff.format]
 quote-style = "double"
 indent-style = "space"
-
-
-"__init__.py" = ["F401"]
-"tests/*" = ["ARG001"]
-"tasks.py" = ["ARG001"]
 
 # MyPy configuration
 [tool.mypy]

@@ -2,13 +2,11 @@
 Tests for WebSocket consumers.
 """
 
+import pytest
 from channels.routing import URLRouter
 from channels.testing import WebsocketCommunicator
-from django.test import TestCase, override_settings
+from django.test import TestCase
 
-import pytest
-
-from example_app.consumers import AnalysisConsumer, TaskStatusConsumer
 from example_app.routing import websocket_urlpatterns
 
 

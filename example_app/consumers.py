@@ -5,13 +5,11 @@ This module contains Django Channels consumers for handling
 WebSocket connections and real-time communication.
 """
 
-import json
 import logging
 from typing import Any
 
 from channels.db import database_sync_to_async
 from channels.generic.websocket import AsyncJsonWebsocketConsumer
-from django.core.cache import cache
 
 logger = logging.getLogger(__name__)
 

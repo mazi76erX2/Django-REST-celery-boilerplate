@@ -2,11 +2,7 @@
 Tests for Celery tasks.
 """
 
-from unittest.mock import MagicMock, patch
-
 from django.test import TestCase, override_settings
-
-import pytest
 
 from example_app.models import Analysis
 from example_app.tasks import (
@@ -47,7 +43,7 @@ class SentimentAnalysisTaskTest(TestCase):
             status="pending",
         )
 
-        result = analyse_sentiment_task(
+        analyse_sentiment_task(
             text=analysis.text,
             analysis_id=analysis.id,
         )

@@ -12,7 +12,6 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 
 import os
 from pathlib import Path
-from typing import Union
 
 from dotenv import load_dotenv
 
@@ -30,7 +29,7 @@ SECRET_KEY = os.environ.get("SECRET_KEY")
 
 
 # SECURITY WARNING: don't run with debug turned on in production!
-def str2bool(arg: Union[int, str]) -> bool:
+def str2bool(arg: int | str) -> bool:
     return str(arg).lower() in ("1", "true")
 
 

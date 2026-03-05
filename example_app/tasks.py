@@ -9,11 +9,10 @@ import logging
 from datetime import timedelta
 from typing import Any
 
+from asgiref.sync import async_to_sync
 from celery import shared_task
 from channels.layers import get_channel_layer
 from django.utils import timezone
-
-from asgiref.sync import async_to_sync
 
 logger = logging.getLogger(__name__)
 
@@ -73,12 +72,12 @@ def analyse_sentiment_task(
         logger.error(f"Error in sentiment analysis task: {exc}")
         # Update status to failed if we have an analysis_id
         if analysis_id:
-            try:
+            import contextlib
+
+            with contextlib.suppress(Exception):
                 Analysis.objects.filter(id=analysis_id).update(status="failed")
-            except Exception:
-                pass
         # Retry the task
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc
 
 
 @shared_task(bind=True, max_retries=3)

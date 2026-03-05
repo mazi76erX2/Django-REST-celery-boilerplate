@@ -3,19 +3,17 @@ Views for the example app.
 """
 
 import logging
-from typing import Optional
 
+from adrf.viewsets import ViewSet
 from celery.result import AsyncResult
 from django.core.cache import cache
+from drf_yasg import openapi
+from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
 from rest_framework.response import Response
-
-from adrf.viewsets import ViewSet
-from drf_yasg import openapi
-from drf_yasg.utils import swagger_auto_schema
 
 from .models import Analysis
 from .serializers import (
@@ -160,7 +158,7 @@ class AnalysisViewSet(ViewSet):
         serializer = AnalysisSerializer(analyses, many=True)
         return Response(serializer.data)
 
-    async def retrieve(self, request: Request, pk: Optional[str] = None) -> Response:
+    async def retrieve(self, request: Request, pk: str | None = None) -> Response:
         """
         Retrieve a specific analysis.
         """
@@ -175,7 +173,7 @@ class AnalysisViewSet(ViewSet):
             )
 
     @action(detail=True, methods=["get"])
-    async def status(self, request: Request, pk: Optional[str] = None) -> Response:
+    async def status(self, request: Request, pk: str | None = None) -> Response:
         """
         Get the status of a specific analysis.
         """
@@ -216,7 +214,7 @@ class TaskStatusViewSet(ViewSet):
     @swagger_auto_schema(
         responses={200: TaskStatusSerializer},
     )
-    def retrieve(self, request: Request, pk: Optional[str] = None) -> Response:
+    def retrieve(self, request: Request, pk: str | None = None) -> Response:
         """
         Get the status of a Celery task.
         """
@@ -243,7 +241,7 @@ class TaskStatusViewSet(ViewSet):
         return Response(response_data)
 
     @action(detail=True, methods=["post"])
-    def revoke(self, request: Request, pk: Optional[str] = None) -> Response:
+    def revoke(self, request: Request, pk: str | None = None) -> Response:
         """
         Revoke/cancel a Celery task.
         """
