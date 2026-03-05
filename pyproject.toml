@@ -145,7 +145,7 @@ ignore_errors = true
 
 # Pytest configuration
 [tool.pytest.ini_options]
-DJANGO_SETTINGS_MODULE = "server.settings.local"
+DJANGO_SETTINGS_MODULE = "server.settings.test"
 python_files = ["test_*.py", "*_test.py"]
 pythonpath = [".", "backend"]
 addopts = [

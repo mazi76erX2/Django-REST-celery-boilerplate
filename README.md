@@ -1,5 +1,470 @@
 # Django REST Boilerplate
 
+An asynchronous API boilerplate using Django REST Framework, Celery, and Django Channels.
+
+## Table of Contents
+
+- [Django REST Boilerplate](#django-rest-boilerplate)
+  - [Table of Contents](#table-of-contents)
+  - [Features](#features)
+  - [Requirements](#requirements)
+  - [Installation](#installation)
+    - [Local Setup with uv](#local-setup-with-uv)
+      - [Running Celery Locally](#running-celery-locally)
+    - [Docker Setup with Watch Mode](#docker-setup-with-watch-mode)
+  - [Usage](#usage)
+    - [Local Development](#local-development)
+    - [Docker Development](#docker-development)
+  - [WebSockets](#websockets)
+  - [Testing](#testing)
+    - [Local Testing](#local-testing)
+    - [Docker Testing](#docker-testing)
+  - [Code Quality](#code-quality)
+  - [Deployment](#deployment)
+    - [Docker Production Deployment](#docker-production-deployment)
+    - [SSL Certificates with Let's Encrypt](#ssl-certificates-with-lets-encrypt)
+    - [AWS Deployment](#aws-deployment)
+  - [Project Structure](#project-structure)
+  - [Makefile Commands](#makefile-commands)
+    - [Installation](#installation-1)
+    - [Local Development](#local-development-1)
+    - [Testing](#testing-1)
+    - [Code Quality](#code-quality-1)
+    - [Docker Development](#docker-development-1)
+    - [Docker Production](#docker-production)
+    - [Utilities](#utilities)
+  - [Configuration](#configuration)
+    - [Environment Variables](#environment-variables)
+  - [Tech Stack](#tech-stack)
+  - [Justifications](#justifications)
+  - [Contributing](#contributing)
+  - [License](#license)
+
+## Features
+
+- **Asynchronous Django** - Built with async views and ADRF for high performance
+- **Django REST Framework** - Powerful and flexible API toolkit
+- **Django Channels** - WebSocket support for real-time communication
+- **Celery** - Distributed task queue with beat scheduler and Flower monitoring
+- **OpenAPI/Swagger** - Auto-generated API documentation at `/swagger/`
+- **Docker with Watch Mode** - Hot-reload during development without rebuilding containers
+- **uv Package Manager** - Lightning-fast dependency management (10-100x faster than pip)
+- **Valkey** - Redis-compatible in-memory data store for caching and Celery broker
+- **PostgreSQL** - Robust relational database
+- **Pre-commit Hooks** - Automated code quality checks on every commit
+- **Type Hints** - Full type annotation support with mypy
+- **Modern Tooling** - Ruff for formatting and linting, pytest for testing
+
+## Requirements
+
+- Python 3.14+
+- Docker and Docker Compose
+- uv (will be installed automatically)
+- PostgreSQL (for local development without Docker)
+
+## Installation
+
+### Local Setup with uv
+
+1. **Clone the repository:**
+```bash
+git clone https://github.com/yourusername/django-rest-boilerplate.git
+cd django-rest-boilerplate
+```
+
+2. **Install uv (if not already installed):**
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+3. **Install dependencies:**
+```bash
+make install-dev
+```
+
+4. **Copy environment file:**
+```bash
+make copy-env
+```
+
+5. **Create and configure the database:**
+
+- **Linux:** `make create-db-linux`
+- **Mac:** `make create-db-mac`
+
+6. **Run migrations:**
+```bash
+make migrate
+```
+
+7. **Start the development server:**
+```bash
+make run
+```
+
+The API will be available at `http://localhost:8000`
+
+#### Running Celery Locally
+
+Run each in a separate terminal:
+
+```bash
+make celery-worker   # Task worker
+make celery-beat     # Scheduled tasks
+make celery-flower   # Monitoring UI at http://localhost:5555
+```
+
+### Docker Setup with Watch Mode
+
+Watch mode automatically syncs your code changes to the container without rebuilding:
+
+```bash
+make copy-env
+make watch
+```
+
+This enables:
+- **Automatic code syncing** — Changes to Python files are instantly reflected
+- **Automatic rebuilds** — Changes to `pyproject.toml` or `uv.lock` trigger a rebuild
+
+Services started:
+| Service | URL |
+|---------|-----|
+| API | http://localhost:8000 |
+| Swagger UI | http://localhost:8000/swagger/ |
+| Flower (Celery) | http://localhost:5555 |
+| PgAdmin | http://localhost:8888 |
+
+## Usage
+
+### Local Development
+```bash
+make run-local       # Run migrations and start the server
+make migrate         # Run database migrations
+make makemigrations  # Create new migrations
+make shell-django    # Open Django shell
+make superuser       # Create a superuser
+```
+
+### Docker Development
+```bash
+make watch           # Start with watch mode (recommended)
+make up              # Start in background
+make logs            # View all logs
+make logs-backend    # Backend logs only
+make shell-docker    # Shell inside the backend container
+make migrate-docker  # Run migrations inside Docker
+make down            # Stop containers
+make down-v          # Stop and remove volumes
+```
+
+## WebSockets
+
+Django Channels provides two WebSocket endpoints:
+
+### `ws://localhost:8000/ws/analysis/` — `AnalysisConsumer`
+
+Real-time sentiment analysis with live results pushed back over the socket.
+
+| Message type | Payload | Description |
+|---|---|---|
+| `ping` | `{"timestamp": "..."}` | Health check — responds with `pong` |
+| `analyze` | `{"text": "..."}` | Queue a single analysis, get `analysis_started` back |
+| `bulk_analyze` | `{"texts": ["...", "..."]}` | Queue bulk analysis with progress updates |
+| `subscribe` | `{"analysis_id": 1}` | Subscribe to updates for a specific analysis |
+| `get_status` | `{"analysis_id": 1}` | Fetch current status of an analysis |
+
+Example (JavaScript):
+```js
+const ws = new WebSocket("ws://localhost:8000/ws/analysis/");
+ws.onmessage = (e) => console.log(JSON.parse(e.data));
+ws.onopen = () => ws.send(JSON.stringify({ type: "analyze", text: "This is great!" }));
+```
+
+### `ws://localhost:8000/ws/tasks/` — `TaskStatusConsumer`
+
+Monitor Celery task status in real time.
+
+| Message type | Payload | Description |
+|---|---|---|
+| `get_task_status` | `{"task_id": "..."}` | Get current status of a Celery task |
+| `subscribe_task` | `{"task_id": "..."}` | Subscribe to updates for a task |
+
+## Testing
+
+### Local Testing
+```bash
+make test        # Run all tests
+make test-cov    # Run with coverage report
+make test-fast   # Stop on first failure
+```
+
+### Docker Testing
+```bash
+make test-docker
+```
+
+## Code Quality
+
+All formatting and linting is handled by **Ruff**.
+
+```bash
+make format        # Format code and fix lint issues
+make format-check  # Check formatting without modifying files
+make lint          # Lint with ruff
+make lint-fix      # Lint and auto-fix
+make typecheck     # Run mypy type checking
+make check         # Run all checks (format-check + lint + typecheck)
+make check-fix     # Format and fix everything
+
+make pre-commit-install  # Install pre-commit hooks
+make pre-commit          # Run all hooks manually
+```
+
+Pre-commit runs automatically on every `git commit`:
+- `ruff` — lint + import sort
+- `ruff-format` — formatting
+- `mypy` — type checking
+- Standard hooks (trailing whitespace, YAML validity, etc.)
+
+## Deployment
+
+### Docker Production Deployment
+
+1. **Configure environment variables** — update `.env`:
+```bash
+DEBUG=false
+SECRET_KEY=your-secure-secret-key
+ALLOWED_HOST_DNS=yourdomain.com www.yourdomain.com
+```
+
+2. **Build and start production containers:**
+```bash
+make prod-up
+make prod-migrate
+```
+
+3. **Manage:**
+```bash
+make prod-logs     # View logs
+make prod-down     # Stop containers
+make prod-restart  # Restart
+```
+
+### SSL Certificates with Let's Encrypt
+
+1. Update domains in `scripts/init-letsencrypt.sh` and `docker/nginx/nginx.conf`
+2. Run: `make ssl-init`
+
+Certificates auto-renew. To manually renew: `make ssl-renew`
+
+### AWS Deployment
+
+1. Configure `AWS_ACCOUNT_ID`, `AWS_REGION`, `AWS_ACCOUNT_URI` in `.env`
+2. Run: `make aws-push`
+
+## Project Structure
+```text
+├── backend/
+│   ├── manage.py
+│   └── server/
+│       ├── asgi.py          # ASGI entry point (HTTP + WebSocket)
+│       ├── celery.py        # Celery app configuration
+│       ├── urls.py          # Root URL configuration
+│       └── settings/
+│           ├── base.py
+│           ├── local.py
+│           └── prod.py
+├── example_app/
+│   ├── consumers.py         # Django Channels WebSocket consumers
+│   ├── routing.py           # WebSocket URL routing
+│   ├── models.py            # Analysis model
+│   ├── serializers.py
+│   ├── tasks.py             # Celery tasks
+│   ├── views.py             # Async DRF ViewSets
+│   ├── urls.py
+│   ├── migrations/
+│   └── tests/
+│       ├── test_consumer.py # WebSocket consumer tests
+│       └── test_tasks.py    # Celery task tests
+├── docker/
+│   ├── backend/
+│   │   ├── Dockerfile
+│   │   ├── entrypoint.sh
+│   │   └── entrypoint.prod.sh
+│   └── nginx/
+├── scripts/
+├── .github/workflows/
+│   └── format-and-lint.yml
+├── docker-compose.yml
+├── docker-compose.prod.yml
+├── pyproject.toml
+├── Makefile
+└── .pre-commit-config.yaml
+```
+
+## Makefile Commands
+
+### Installation
+
+| Command | Description |
+|---------|-------------|
+| `make install` | Install uv and project dependencies |
+| `make install-dev` | Install development dependencies |
+| `make lock` | Lock dependencies |
+| `make update` | Update all dependencies |
+| `make copy-env` | Copy environment example file |
+
+### Local Development
+
+| Command | Description |
+|---------|-------------|
+| `make run` | Run the development server |
+| `make run-local` | Run migrations and start the server |
+| `make migrate` | Run database migrations |
+| `make makemigrations` | Create new migrations |
+| `make shell-django` | Open Django shell |
+| `make superuser` | Create a superuser |
+| `make celery-worker` | Start Celery worker |
+| `make celery-beat` | Start Celery beat scheduler |
+| `make celery-flower` | Start Flower monitoring UI |
+
+### Testing
+
+| Command | Description |
+|---------|-------------|
+| `make test` | Run tests |
+| `make test-cov` | Run tests with coverage report |
+| `make test-fast` | Run tests (stop on first failure) |
+
+### Code Quality
+
+| Command | Description |
+|---------|-------------|
+| `make format` | Format code with ruff |
+| `make format-check` | Check formatting without changes |
+| `make lint` | Lint with ruff |
+| `make lint-fix` | Lint and auto-fix |
+| `make typecheck` | Run mypy type checking |
+| `make check` | Run all checks |
+| `make check-fix` | Format and fix all issues |
+| `make pre-commit` | Run pre-commit hooks |
+| `make pre-commit-install` | Install pre-commit hooks |
+
+### Docker Development
+
+| Command | Description |
+|---------|-------------|
+| `make up` | Build and start Docker containers |
+| `make watch` | Start with watch mode (auto-reload) |
+| `make down` | Stop Docker containers |
+| `make down-v` | Stop containers and remove volumes |
+| `make restart` | Restart Docker containers |
+| `make logs` | View container logs |
+| `make logs-backend` | View backend container logs |
+| `make shell-docker` | Open shell in backend container |
+| `make test-docker` | Run tests in Docker |
+| `make migrate-docker` | Run migrations in Docker |
+| `make debug-up` | Start debug containers |
+
+### Docker Production
+
+| Command | Description |
+|---------|-------------|
+| `make prod-up` | Start production containers |
+| `make prod-down` | Stop production containers |
+| `make prod-migrate` | Run production migrations |
+| `make prod-logs` | View production logs |
+| `make prod-shell` | Open shell in production container |
+| `make prod-restart` | Restart production containers |
+| `make ssl-init` | Initialize SSL certificates |
+| `make ssl-renew` | Renew SSL certificates |
+
+### Utilities
+
+| Command | Description |
+|---------|-------------|
+| `make clean` | Clean cache and build files |
+| `make clean-docker` | Remove all Docker resources |
+| `make status` | Show Docker container status |
+| `make health` | Check health of services |
+| `make info` | Show project info |
+| `make help` | Show all available commands |
+
+## Configuration
+
+### Environment Variables
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `DEBUG` | Enable debug mode | `true` |
+| `SECRET_KEY` | Django secret key | — |
+| `ALLOWED_HOST_DNS` | Allowed hosts (space-separated) | `0.0.0.0 localhost 127.0.0.1` |
+| `DATABASE_NAME` | Database name | `django-app` |
+| `DATABASE_USERNAME` | Database username | `postgres` |
+| `DATABASE_PASSWORD` | Database password | `postgres` |
+| `DATABASE_HOST` | Database host | `db` |
+| `DATABASE_PORT` | Database port | `5432` |
+| `CACHE_HOST` | Valkey/Redis host | `valkey` |
+| `CACHE_PORT` | Valkey/Redis port | `6379` |
+| `CELERY_BROKER_URL` | Celery broker URL | `redis://valkey:6379/0` |
+| `PGADMIN_DEFAULT_EMAIL` | PgAdmin email | — |
+| `PGADMIN_DEFAULT_PASSWORD` | PgAdmin password | — |
+
+## Tech Stack
+
+| Technology | Purpose |
+|------------|---------|
+| Django 6.0 | Web framework |
+| Django REST Framework | API toolkit |
+| Django Channels | WebSocket / real-time |
+| ADRF | Async DRF support |
+| Celery | Distributed task queue |
+| PostgreSQL 18 | Database |
+| Valkey | Caching and Celery broker (Redis-compatible) |
+| uv | Package manager |
+| Docker | Containerization |
+| Nginx | Reverse proxy |
+| Gunicorn + Uvicorn | ASGI server |
+| Ruff | Linter and formatter |
+| mypy | Type checker |
+| pytest | Testing framework |
+| drf-yasg | OpenAPI / Swagger docs |
+
+## Justifications
+
+**Django Channels**: Extends Django to handle WebSockets and other async protocols, enabling real-time features like live analysis results and task progress updates without polling.
+
+**Celery + django-celery-beat**: Provides distributed background task execution and scheduled tasks (cron-style), keeping API responses fast by offloading heavy work to workers.
+
+**Valkey**: A Redis-compatible in-memory data store — used as both the Celery broker and Django cache. Valkey is a community-driven fork of Redis with identical API compatibility.
+
+**uv**: A blazingly fast Python package manager written in Rust. It's 10-100x faster than pip and provides better dependency resolution with a lock file.
+
+**Ruff**: Replaces black, isort, and flake8 with a single ultra-fast tool written in Rust. Handles formatting, import sorting, and linting in one pass.
+
+**ADRF**: Adds async support to Django REST Framework views, allowing truly async request handling with Django's async ORM.
+
+**Docker with Watch Mode**: Enables hot-reloading during development without rebuilding containers, significantly improving the development experience.
+
+**Pre-commit Hooks**: Ensures code quality by running ruff, ruff-format, and mypy before each commit, catching issues early.
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Install pre-commit hooks (`make pre-commit-install`)
+4. Make your changes
+5. Run checks (`make check`)
+6. Commit your changes (`git commit -m 'Add amazing feature'`)
+7. Push to the branch (`git push origin feature/amazing-feature`)
+8. Open a Pull Request
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+
 An asynchronous API using Django REST Framework.
 
 ## Table of Contents
