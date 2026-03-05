@@ -56,6 +56,8 @@ INSTALLED_APPS = [
     "django_celery_beat",
     "django_celery_results",
     "drf_yasg",
+    # local apps
+    "example_app",
 ]
 
 # define which origins are allowed

@@ -10,7 +10,7 @@ from collections.abc import Iterable
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
-from django.urls import URLPattern, URLResolver, path
+from django.urls import URLPattern, URLResolver, include, path
 from rest_framework import permissions
 
 from drf_yasg import openapi
@@ -42,6 +42,7 @@ urlpatterns: Iterable[URLResolver | URLPattern] = [
         name="schema-redoc",
     ),
     # path("api/v1/", include("example_app.urls")),
+    path("api/v1/", include("example_app.urls")),
 ]
 
 if settings.DEBUG:

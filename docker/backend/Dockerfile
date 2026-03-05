@@ -7,7 +7,7 @@ RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    netcat \
+    netcat-openbsd \
     libpq5 \
     build-essential \
     libpq-dev \
@@ -43,7 +43,7 @@ FROM python:3.14.2-slim AS final
 
 # Install runtime dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    netcat \
+    netcat-openbsd \
     libpq5 \
     && rm -rf /var/lib/apt/lists/*
 

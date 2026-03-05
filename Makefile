@@ -199,16 +199,16 @@ test-watch: ## Run tests in watch mode
 # =============================================================================
 
 .PHONY: format
-format: ## Format code with black and isort
+format: ## Format code with ruff
 	@echo "$(GREEN)Formatting code...$(NC)"
-	$(UV) run black $(APP_DIR)
-	$(UV) run isort $(APP_DIR)
+	$(UV) run ruff format $(APP_DIR)
+	$(UV) run ruff check $(APP_DIR) --fix
 
 .PHONY: format-check
-format-check: ## Check code formatting
+format-check: ## Check code formatting with ruff
 	@echo "$(GREEN)Checking code format...$(NC)"
-	$(UV) run black $(APP_DIR) --check --diff
-	$(UV) run isort $(APP_DIR) --check-only --diff
+	$(UV) run ruff format $(APP_DIR) --check
+	$(UV) run ruff check $(APP_DIR)
 
 .PHONY: lint
 lint: ## Lint code with ruff
